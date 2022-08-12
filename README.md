@@ -1,1 +1,1 @@
-my new file contents
+# 忍者日常新事物
