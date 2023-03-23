@@ -7,3 +7,5 @@
 - [ ] online postman API/websocket/MQTT <a href="https://github.com/hoppscotch/hoppscotch">https://github.com/hoppscotch/hoppscotch
 - [ ] 轉盤：https://pickerwheel.com/
 - [ ] Command line subtitle generator with Whisper API https://github.com/dsymbol/decipher
+- [ ] 裁剪圖片/影片工具 https://cloudinary.com/
+  - [ ] [Python SDK](https://cloudinary.com/documentation/django_integration)
