@@ -6,3 +6,4 @@
 - [ ] 小麥輸入法 https://mcbopomofo.openvanilla.org/
 - [ ] online postman API/websocket/MQTT <a href="https://github.com/hoppscotch/hoppscotch">https://github.com/hoppscotch/hoppscotch
 - [ ] 轉盤：https://pickerwheel.com/
+- [ ] Command line subtitle generator with Whisper API https://github.com/dsymbol/decipher
