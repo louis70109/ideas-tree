@@ -9,3 +9,5 @@
 - [ ] Command line subtitle generator with Whisper API https://github.com/dsymbol/decipher
 - [ ] 裁剪圖片/影片工具 https://cloudinary.com/
   - [ ] [Python SDK](https://cloudinary.com/documentation/django_integration)
+
+Nike SB Chron 2 Canvas
