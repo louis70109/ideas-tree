@@ -1,0 +1,98 @@
+name: Daily Summary and Notification
+
+on:
+  schedule:
+    # Run at 23:30 GMT+8 (15:30 UTC)
+    - cron: '30 15 * * *'
+  workflow_dispatch:  # Allow manual triggering for testing
+
+jobs:
+  process-daily-content:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Get current date
+        id: date
+        run: |
+          echo "DATE=$(TZ='Asia/Taipei' date +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "Current date (GMT+8): $(TZ='Asia/Taipei' date)"
+
+      - name: Check if today's file exists
+        id: check_file
+        run: |
+          TODAY_FILE="${{ env.DATE }}.md"
+          if [ -f "$TODAY_FILE" ]; then
+            echo "FILE_EXISTS=true" >> $GITHUB_ENV
+            echo "Today's file exists: $TODAY_FILE"
+          else
+            echo "FILE_EXISTS=false" >> $GITHUB_ENV
+            echo "Today's file doesn't exist: $TODAY_FILE"
+          fi
+
+      - name: Process file using OpenAI API
+        if: env.FILE_EXISTS == 'true'
+        id: process_content
+        run: |
+          TODAY_FILE="${{ env.DATE }}.md"
+          echo "Processing file: $TODAY_FILE"
+          
+          if [ -s "$TODAY_FILE" ]; then
+            # Read file content and prompt
+            FILE_CONTENT=$(cat "$TODAY_FILE")
+            PROMPT=$(cat prompt.md)
+            
+            # Replace placeholder in prompt with file content
+            FINAL_PROMPT="${PROMPT/\{\{CONTENT\}\}/$FILE_CONTENT}"
+            
+            # Call OpenAI API
+            RESPONSE=$(curl -s "https://api.openai.com/v1/chat/completions" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+              -d '{
+                "model": "gpt-4",
+                "messages": [{"role": "user", "content": "'"$FINAL_PROMPT"'"}]
+              }')
+            
+            # Extract the content from the response
+            CONTENT=$(echo "$RESPONSE" | python -c "import json, sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])")
+            
+            # Save response to file
+            echo "$CONTENT" > "summary_$TODAY_FILE"
+            echo "SUMMARY=$CONTENT" >> $GITHUB_ENV
+            echo "HAS_CONTENT=true" >> $GITHUB_ENV
+          else
+            echo "File is empty, skipping processing"
+            echo "HAS_CONTENT=false" >> $GITHUB_ENV
+          fi
+
+      - name: Send notification via LINE
+        if: env.HAS_CONTENT == 'true'
+        run: |
+          # Escape special characters for JSON
+          SUMMARY_ESCAPED=$(echo "${{ env.SUMMARY }}" | python -c "import json, sys; print(json.dumps(sys.stdin.read()))")
+          SUMMARY_ESCAPED="${SUMMARY_ESCAPED:1:-1}"  # Remove the enclosing quotes
+          
+          curl -v -X POST https://api.line.me/v2/bot/message/push \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${{ secrets.LINE_ACCESS_TOKEN }}" \
+            -d '{
+              "to": "${{ secrets.LINE_USER_ID }}",
+              "messages":[
+                {
+                  "type":"text",
+                  "text":"'"Daily Summary (${GITHUB_ENV.DATE}):\\n${SUMMARY_ESCAPED}"'"
+                }
+              ]
+            }'
